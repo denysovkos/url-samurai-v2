@@ -1,7 +1,109 @@
 ﻿@page "/"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using UrlSamurai.Data
+@using UrlSamurai.Data.Entities
+
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="card" style="padding-right: 0; padding-left: 0;">
+    <h5 class="card-header">URL Samurai ⚔️</h5>
+    <div class="card-body">
+        <EditForm Model="@Input" method="post" OnValidSubmit="HandleShortenUrl" FormName="shortenUrlForm">
+            <DataAnnotationsValidator/>
+            <ValidationSummary class="text-danger" role="alert"/>
 
-Welcome to your new app.
+            <div class="mb-3">
+                <InputText @bind-Value="Input.Url" class="form-control" placeholder="Enter your URL..."/>
+                <ValidationMessage For="() => Input.Url" class="text-danger"/>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Shorten URL</button>
+        </EditForm>
+
+        @if (SavedUrl != null)
+        {
+            <div class="alert alert-success mt-4">
+                <strong>Shortened URL:</strong> @SavedUrl.ShortId
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mt-5" style="padding-right: 0; padding-left: 0;">
+    <div class="card-header">What is it?</div>
+    <div class="card-body">
+        <h5 class="card-title">Sshare.dev – Simple, Fast, Free URL Shortener</h5>
+        <p class="card-text">
+            Sshare.dev is a minimalistic, privacy-friendly URL shortener. Just paste a long link and get a short one instantly – no ads, no tracking (except if you would like so).
+        </p>
+
+        <p class="card-text">
+            It's ideal for quick sharing, messaging, or QR code generation. All links are automatically shortened and stored with unique short IDs.
+        </p>
+
+        <hr />
+
+        <h6>Disclaimer</h6>
+        <p class="text-muted small">
+            This is a personal project provided as-is. I take no responsibility for the content of shortened URLs, their validity, or any third-party misuse. Use at your own risk.
+        </p>
+
+        <h6>FAQ</h6>
+        <ul class="small">
+            <li><strong>Do you log or track anything?</strong> No. I don’t store user data or usage metrics.</li>
+            <li><strong>Are links permanent?</strong> Currently, no - valid only for 60 days.</li>
+            <li><strong>Can I report malicious content?</strong> Not yet, but you can contact me via the site footer if needed.</li>
+            <li><strong>Is it open source?</strong> Not yet public, but will be in the future.</li>
+        </ul>
+    </div>
+</div>
+
+
+@code {
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private Urls? SavedUrl;
+
+    public async Task HandleShortenUrl()
+    {
+        Console.WriteLine($"Submitted Input: {Input.Url}");
+
+        string? ownerId = null;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            ownerId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        var newUrl = new Urls
+        {
+            UrlValue = Input.Url,
+            CreatedAt = DateTime.UtcNow,
+            OwnerId = ownerId
+        };
+
+        await DbContext.Urls.AddAsync(newUrl);
+        await DbContext.SaveChangesAsync();
+
+        SavedUrl = await DbContext.Urls.FirstOrDefaultAsync(u => u.Id == newUrl.Id);
+
+        Console.WriteLine($"Saved Short ID: {SavedUrl?.ShortId} ({SavedUrl?.Id} {SavedUrl?.NumericId}  {SavedUrl?.UrlValue}) {newUrl.ShortId} ID: {newUrl.Id}");
+
+        Input = new InputModel(); // Clear form input
+    }
+
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "URL is required")]
+        public string Url { get; set; } = string.Empty;
+    }
+}

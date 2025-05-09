@@ -24,7 +24,8 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnectionString") ??
-                               throw new InvalidOperationException("Connection string 'PostgresConnectionString' not found.");
+                               throw new InvalidOperationException(
+                                   "Connection string 'PostgresConnectionString' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

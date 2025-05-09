@@ -1,0 +1,61 @@
+@page "/urls"
+
+@using Microsoft.EntityFrameworkCore
+@using UrlSamurai.Data
+@using UrlSamurai.Data.Entities
+
+@attribute [StreamRendering]
+
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Yours urls</h3>
+
+@if (urlsList == null)
+{
+    <p>
+        <em>Loading...</em>
+    </p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Original Url</th>
+            <th>Shorten Url</th>
+            <th>Created at</th>
+            <th>Visit count</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var url in urlsList)
+        {
+            <tr>
+                <td>@url.UrlValue</td>
+                <td>/@url.ShortId</td>
+                <td>@url.CreatedAt</td>
+                <td>0</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Urls[]? urlsList;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var ownerId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            urlsList = await DbContext.Urls.Where(u => u.OwnerId == ownerId).OrderByDescending(u => u.Id).ToArrayAsync();
+            return;
+        }
+
+        urlsList = [];
+    }
+}

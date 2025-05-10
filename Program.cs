@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Resend;
 using UrlSamurai.Components;
 using UrlSamurai.Components.Account;
 using UrlSamurai.Data;
@@ -23,18 +24,27 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnectionString") ??
-                               throw new InvalidOperationException(
-                                   "Connection string 'PostgresConnectionString' not found.");
+ var postgresConnectionString = builder.Configuration.GetValue<string>("DB_CONNECTION_STRING") ??
+        throw new InvalidOperationException("Connection string 'DB_CONNECTION_STRING' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+// Resend email client
+builder.Services.AddOptions();
+builder.Services.AddHttpClient<ResendClient>();
+builder.Services.Configure<ResendClientOptions>( o =>
+{
+    o.ApiToken = builder.Configuration.GetValue<string>("RESEND_APITOKEN") ??
+                 throw new InvalidOperationException("Api key 'RESEND_APITOKEN' not found.");
+});
+
+builder.Services.AddScoped<IResend, ResendClient>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, IdentityResendClient>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
-
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 

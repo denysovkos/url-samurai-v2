@@ -1,50 +1,59 @@
 @page "/urls"
+@rendermode InteractiveServer
 
 @using Microsoft.EntityFrameworkCore
 @using UrlSamurai.Data
 @using UrlSamurai.Data.Entities
+@using System.Globalization
+@using System.Text.Encodings.Web
 
 @attribute [StreamRendering]
 
 @inject ApplicationDbContext DbContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime Js
 
-<h3>Yours urls</h3>
+<h3>Your URLs</h3>
 
 @if (urlsList == null)
 {
-    <p>
-        <em>Loading...</em>
-    </p>
+    <p><em>Loading...</em></p>
 }
 else
 {
     <table class="table">
         <thead>
         <tr>
-            <th>Original Url</th>
-            <th>Shorten Url</th>
-            <th>Created at</th>
-            <th>Visit count</th>
+            <th>Id</th>
+            <th>Original URL</th>
+            <th>Shortened URL</th>
+            <th>Created At</th>
+            <th>Visit Count</th>
         </tr>
         </thead>
         <tbody>
-        @foreach (var url in urlsList)
-        {
-            <tr>
-                <td>@url.UrlValue</td>
-                <td>/@url.ShortId</td>
-                <td>@url.CreatedAt</td>
-                <td>0</td>
-            </tr>
-        }
+            @foreach (var url in urlsList)
+            {
+                <tr>
+                    <td>@url.ShortId</td>
+                    <td>@url.UrlValue</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="() => CopyUrl(url.ShortId)">
+                            Copy
+                        </button>
+                    </td>
+                    <td>@url.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
+                    <td>0</td>
+                </tr>
+            }
         </tbody>
     </table>
 }
 
 @code {
     private Urls[]? urlsList;
-    
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -52,10 +61,20 @@ else
         if (user.Identity?.IsAuthenticated == true)
         {
             var ownerId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            urlsList = await DbContext.Urls.Where(u => u.OwnerId == ownerId).OrderByDescending(u => u.Id).ToArrayAsync();
+            urlsList = await DbContext.Urls
+                .Where(u => u.OwnerId == ownerId)
+                .OrderByDescending(u => u.Id)
+                .ToArrayAsync();
             return;
         }
 
         urlsList = [];
+    }
+
+    private async Task CopyUrl(string shortId)
+    {
+        var fullUrl = $"https://www.sshare.dev/u/{UrlEncoder.Default.Encode(shortId)}";
+        Console.WriteLine($"Copying URL: {fullUrl}");
+        await Js.InvokeVoidAsync("copyText", fullUrl);
     }
 }

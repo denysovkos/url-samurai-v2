@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 @using Microsoft.EntityFrameworkCore
 @using UrlSamurai.Data
 @using UrlSamurai.Data.Entities
@@ -13,12 +14,12 @@
     <h5 class="card-header">URL Samurai ⚔️</h5>
     <div class="card-body">
         <EditForm Model="@Input" method="post" OnValidSubmit="HandleShortenUrl" FormName="shortenUrlForm">
-            <DataAnnotationsValidator/>
-            <ValidationSummary class="text-danger" role="alert"/>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
 
             <div class="mb-3">
-                <InputText @bind-Value="Input.Url" class="form-control" placeholder="Enter your URL..."/>
-                <ValidationMessage For="() => Input.Url" class="text-danger"/>
+                <InputText @bind-Value="Input.Url" class="form-control" placeholder="Enter your URL..." />
+                <ValidationMessage For="() => Input.Url" class="text-danger" />
             </div>
 
             <button type="submit" class="btn btn-primary w-100">Shorten URL</button>
@@ -38,18 +39,14 @@
         <p class="card-text">
             Sshare.dev is a minimalistic, privacy-friendly URL shortener. Just paste a long link and get a short one instantly – no ads, no tracking (except if you would like so).
         </p>
-
         <p class="card-text">
             It's ideal for quick sharing, messaging, or QR code generation. All links are automatically shortened and stored with unique short IDs.
         </p>
-
         <hr />
-
         <h6>Disclaimer</h6>
         <p class="text-muted small">
             This is a personal project provided as-is. I take no responsibility for the content of shortened URLs, their validity, or any third-party misuse. Use at your own risk.
         </p>
-
         <h6>FAQ</h6>
         <ul class="small">
             <li><strong>Do you log or track anything?</strong> No. I don’t store user data or usage metrics.</li>
@@ -59,7 +56,6 @@
         </ul>
     </div>
 </div>
-
 
 @code {
     [SupplyParameterFromForm]
@@ -90,14 +86,30 @@
         await DbContext.SaveChangesAsync();
 
         SavedUrl = await DbContext.Urls.FirstOrDefaultAsync(u => u.Id == newUrl.Id);
-        
-        Input = new InputModel(); // Clear form input
+
+        Input = new InputModel(); // Clear form
     }
 
-
-    private sealed class InputModel
+    public sealed class InputModel
     {
         [Required(ErrorMessage = "URL is required")]
+        [CustomValidation(typeof(InputModel), nameof(ValidateUrl))]
         public string Url { get; set; } = string.Empty;
+
+        private static readonly Regex UrlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
+
+        public static ValidationResult? ValidateUrl(object? value, ValidationContext _)
+        {
+            var url = value as string;
+            if (string.IsNullOrWhiteSpace(url))
+                return new ValidationResult("URL is required");
+
+            if (!UrlRegex.IsMatch(url))
+                return new ValidationResult("Enter a valid, complete URL (e.g., https://example.com)");
+
+            return ValidationResult.Success;
+        }
+
     }
+
 }

@@ -11,7 +11,6 @@
 
 @inject ApplicationDbContext DbContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IJSRuntime Js
 
 <h3>Your URLs</h3>
 
@@ -19,17 +18,21 @@
 {
     <p><em>Loading...</em></p>
 }
+else if (urlsList.Length == 0)
+{
+    <p><em>No URLs found.</em></p>
+}
 else
 {
     <table class="table">
         <thead>
-        <tr>
-            <th>Id</th>
-            <th>Original URL</th>
-            <th>Shortened URL</th>
-            <th>Created At</th>
-            <th>Visit Count</th>
-        </tr>
+            <tr>
+                <th>Id</th>
+                <th>Original URL</th>
+                <th>Shortened URL</th>
+                <th>Created At</th>
+                <th>Visit Count</th>
+            </tr>
         </thead>
         <tbody>
             @foreach (var url in urlsList)
@@ -39,42 +42,96 @@ else
                     <td>@url.UrlValue</td>
                     <td>
                         <button class="btn btn-sm btn-outline-secondary"
-                                @onclick="() => CopyUrl(url.ShortId)">
+                                onclick="navigator.clipboard.writeText('@ParseUrl(url.ShortId)')">
                             Copy
                         </button>
                     </td>
                     <td>@url.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
-                    <td>0</td>
+                    <td>@url.VisitCount</td>
                 </tr>
             }
         </tbody>
     </table>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-outline-primary" @onclick="PreviousPage" disabled="@(_currentPage == 1)">← Previous</button>
+        <span>Page @_currentPage of @_totalPages</span>
+        <button class="btn btn-outline-primary" @onclick="NextPage" disabled="@(_currentPage == _totalPages)">Next →</button>
+    </div>
 }
 
 @code {
-    private Urls[]? urlsList;
+    private UrlWithCount[]? urlsList;
+    private int _currentPage = 1;
+    private const int PageSize = 10;
+    private int _totalPages = 1;
+
+    private sealed class UrlWithCount
+    {
+        public string ShortId { get; set; } = string.Empty;
+        public string UrlValue { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int VisitCount { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPage();
+    }
+
+    private async Task LoadPage()
+    {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        if (user.Identity?.IsAuthenticated == true)
+        if (user.Identity?.IsAuthenticated != true)
         {
-            var ownerId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            urlsList = await DbContext.Urls
-                .Where(u => u.OwnerId == ownerId)
-                .OrderByDescending(u => u.Id)
-                .ToArrayAsync();
+            urlsList = [];
             return;
         }
 
-        urlsList = [];
+        var ownerId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var totalCount = await DbContext.Urls.CountAsync(u => u.OwnerId == ownerId);
+        _totalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
+
+        urlsList = await (
+            from url in DbContext.Urls
+            where url.OwnerId == ownerId
+            join visit in DbContext.UrlVisit on url.ShortId equals visit.ShortId into visitGroup
+            orderby url.Id descending
+            select new UrlWithCount
+            {
+                ShortId = url.ShortId,
+                UrlValue = url.UrlValue,
+                CreatedAt = url.CreatedAt,
+                VisitCount = visitGroup.Count()
+            }
+        )
+        .Skip((_currentPage - 1) * PageSize)
+        .Take(PageSize)
+        .ToArrayAsync();
     }
 
-    private async Task CopyUrl(string shortId)
+    private async Task NextPage()
     {
-        var fullUrl = $"https://www.sshare.dev/u/{UrlEncoder.Default.Encode(shortId)}";
-        Console.WriteLine($"Copying URL: {fullUrl}");
-        await Js.InvokeVoidAsync("copyText", fullUrl);
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            await LoadPage();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            await LoadPage();
+        }
+    }
+
+    private string ParseUrl(string shortId)
+    {
+        return $"https://www.sshare.dev/u/{UrlEncoder.Default.Encode(shortId)}";
     }
 }

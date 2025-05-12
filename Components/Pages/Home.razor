@@ -1,7 +1,5 @@
 ﻿@page "/"
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using UrlSamurai.Data
 @using UrlSamurai.Data.Entities
@@ -28,9 +26,7 @@
 
         @if (SavedUrl != null)
         {
-            <div class="alert alert-success mt-4">
-                <strong>Shortened URL:</strong> @SavedUrl.ShortId
-            </div>
+            <SuccessResult GeneratedUrl="SavedUrl" />
         }
     </div>
 </div>
@@ -57,7 +53,7 @@
         <h6>FAQ</h6>
         <ul class="small">
             <li><strong>Do you log or track anything?</strong> No. I don’t store user data or usage metrics.</li>
-            <li><strong>Are links permanent?</strong> Currently, no - valid only for 60 days.</li>
+            <li><strong>Are links permanent?</strong> Currently, no - valid only for 180 days.</li>
             <li><strong>Can I report malicious content?</strong> Not yet, but you can contact me via the site footer if needed.</li>
             <li><strong>Is it open source?</strong> Not yet public, but will be in the future.</li>
         </ul>
@@ -94,9 +90,7 @@
         await DbContext.SaveChangesAsync();
 
         SavedUrl = await DbContext.Urls.FirstOrDefaultAsync(u => u.Id == newUrl.Id);
-
-        Console.WriteLine($"Saved Short ID: {SavedUrl?.ShortId} ({SavedUrl?.Id} {SavedUrl?.NumericId}  {SavedUrl?.UrlValue}) {newUrl.ShortId} ID: {newUrl.Id}");
-
+        
         Input = new InputModel(); // Clear form input
     }
 

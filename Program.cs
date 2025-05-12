@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Resend;
 using UrlSamurai.Components;
 using UrlSamurai.Components.Account;
+using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 
 // ------------------------------------
@@ -66,6 +67,9 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
+
+// QRCodes Generator
+builder.Services.AddSingleton<QrCodeService>();
 
 // ------------------------------------
 // 2. Build app & configure middleware

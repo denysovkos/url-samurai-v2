@@ -1,0 +1,46 @@
+@using System.Globalization
+@using System.Text.Encodings.Web
+@using UrlSamurai.Components.Services
+@using UrlSamurai.Data.Entities
+@rendermode InteractiveServer
+@inject IJSRuntime Js
+@inject QrCodeService QrService
+
+<div>
+    <div class="alert alert-success mt-4">
+        <p>
+            <strong>Shortened URL:</strong>
+            <span class="me-2">@_formattedUrl</span>
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    @onclick="CopyLink"
+            >
+                Copy
+            </button>
+        </p>
+
+        <img style="max-height: 200px; max-width: 200px" src="data:image/png;base64,@_base64Qr" alt="QRCode"/>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Urls? GeneratedUrl { get; set; }
+    
+    private string? _base64Qr;
+    private string? _formattedUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (GeneratedUrl?.ShortId is not null)
+        {
+            _formattedUrl = string.Format(CultureInfo.InvariantCulture, "https://www.sshare.dev/u/{0}", UrlEncoder.Default.Encode(GeneratedUrl.ShortId));
+            _base64Qr = QrService.GenerateBase64(_formattedUrl);
+        }
+    }
+    
+    private async Task CopyLink()
+    {
+        Console.WriteLine($"Copying url: {_formattedUrl}");
+        await Js.InvokeVoidAsync("copyText", _formattedUrl);
+    }
+}

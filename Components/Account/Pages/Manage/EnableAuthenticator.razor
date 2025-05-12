@@ -5,6 +5,7 @@
 @using System.Text
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
+@using UrlSamurai.Components.Services
 @using UrlSamurai.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -12,6 +13,7 @@
 @inject UrlEncoder UrlEncoder
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
+@inject QrCodeService QrService
 
 <PageTitle>Configure authenticator app</PageTitle>
 
@@ -40,8 +42,8 @@ else
             <li>
                 <p>Scan the QR Code or enter this key <kbd>@sharedKey</kbd> into your two factor authenticator app.
                     Spaces and casing do not matter.</p>
-                <div class="alert alert-info">Learn how to <a href="https://go.microsoft.com/fwlink/?Linkid=852423">enable
-                        QR code generation</a>.
+                <div class="alert alert-info">
+                    <img style="max-height: 200px; max-width: 200px" src="data:image/png;base64,@authenticatorUri" alt="QRCode for 2FA"/>
                 </div>
                 <div></div>
                 <div data-url="@authenticatorUri"></div>
@@ -73,8 +75,6 @@ else
 }
 
 @code {
-    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
-
     private string? message;
     private ApplicationUser user = default!;
     private string? sharedKey;
@@ -158,12 +158,7 @@ else
 
     private string GenerateQrCodeUri(string email, string unformattedKey)
     {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            AuthenticatorUriFormat,
-            UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
-            UrlEncoder.Encode(email),
-            unformattedKey);
+        return QrService.GenerateTfaQr(email, unformattedKey);
     }
 
     private sealed class InputModel

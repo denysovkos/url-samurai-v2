@@ -28,8 +28,9 @@ public static class GeoIpService
             Console.WriteLine($"Found ISO code: {country?.Country?.IsoCode}");
             return country?.Country?.IsoCode;
         }
-        catch
+        catch (Exception err)
         {
+            Console.WriteLine(err);
             return null;
         }
     }

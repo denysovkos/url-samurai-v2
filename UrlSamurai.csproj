@@ -39,6 +39,7 @@
     <ItemGroup>
         <None Update="GeoLite2-Country.mmdb">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
         </None>
     </ItemGroup>
 

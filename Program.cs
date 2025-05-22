@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resend;
@@ -71,6 +72,13 @@ builder.Services.AddCors(options =>
 // QRCodes Generator
 builder.Services.AddSingleton<QrCodeService>();
 
+// Headers fix
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
+
 // ------------------------------------
 // 2. Build app & configure middleware
 // ------------------------------------
@@ -96,6 +104,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.UseForwardedHeaders();
 
 // Swagger (publicly available)
 app.UseSwagger();

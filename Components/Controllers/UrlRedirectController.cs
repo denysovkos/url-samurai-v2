@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 using UrlSamurai.Data.Entities;
+using System.Net;
 
 namespace UrlSamurai.Components.Controllers;
 
@@ -20,11 +21,13 @@ public class UrlRedirectController(ApplicationDbContext db) : ControllerBase
         if (urlEntry == null)
             return NotFound("This URL not found.");
 
-        var country = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var ip = GetClientIp(HttpContext);
+        var country = GeoIpService.GetCountry(ip);
+
         var visit = new UrlVisit
         {
             ShortId = shortId,
-            Country = GeoIpService.GetCountry(country)
+            Country = country
         };
 
         db.UrlVisit.Add(visit);
@@ -33,4 +36,16 @@ public class UrlRedirectController(ApplicationDbContext db) : ControllerBase
         return Redirect(urlEntry.UrlValue);
     }
 
+    private static string? GetClientIp(HttpContext context)
+    {
+        var headers = context.Request.Headers;
+        string? ip = headers["X-Forwarded-For"].FirstOrDefault()
+                     ?? headers["X-Real-IP"].FirstOrDefault()
+                     ?? context.Connection.RemoteIpAddress?.ToString();
+
+        if (IPAddress.TryParse(ip, out var parsed) && parsed.IsIPv4MappedToIPv6)
+            ip = parsed.MapToIPv4().ToString();
+
+        return ip;
+    }
 }

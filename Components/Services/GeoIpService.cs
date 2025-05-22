@@ -16,7 +16,10 @@ public static class GeoIpService
     {
         Console.WriteLine($"Redirect requested URL: {ip}");
         if (string.IsNullOrWhiteSpace(ip))
+        {
             return null;
+        }
+            
 
         try
         {
@@ -28,7 +31,11 @@ public static class GeoIpService
             
             Console.WriteLine($"Parsed IP: {parsedIp}");
             if (!IsPublic(parsedIp))
+            {
+                Console.WriteLine($"Not a public IP :: {parsedIp}");
                 return null;
+            }
+                
 
             using var reader = new DatabaseReader(DbPath);
             var country = reader.Country(parsedIp);

@@ -19,11 +19,13 @@ public static class GeoIpService
         try
         {
             var parsedIp = System.Net.IPAddress.Parse(ip);
+            Console.WriteLine($"Parsed IP: {parsedIp}");
             if (!IsPublic(parsedIp))
                 return null;
 
             using var reader = new DatabaseReader(DbPath);
             var country = reader.Country(parsedIp);
+            Console.WriteLine($"Found ISO code: {country?.Country?.IsoCode}");
             return country?.Country?.IsoCode;
         }
         catch

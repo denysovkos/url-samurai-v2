@@ -20,7 +20,12 @@ public static class GeoIpService
 
         try
         {
-            var parsedIp = System.Net.IPAddress.Parse(ip);
+            var parsedIp = IPAddress.Parse(ip);
+            if (parsedIp.IsIPv4MappedToIPv6)
+            {
+                parsedIp = parsedIp.MapToIPv4();
+            }
+            
             Console.WriteLine($"Parsed IP: {parsedIp}");
             if (!IsPublic(parsedIp))
                 return null;

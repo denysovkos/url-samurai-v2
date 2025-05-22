@@ -4,26 +4,50 @@ using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 using UrlSamurai.Data.Entities;
 using System.Net;
+using UrlSamurai.Components.Cache;
 
 namespace UrlSamurai.Components.Controllers;
 
 [ApiController]
 [Route("u")]
-public class UrlRedirectController(ApplicationDbContext db) : ControllerBase
+public class UrlRedirectController(ApplicationDbContext db, RedisCacheService redis) : ControllerBase
 {
     [HttpGet("{shortId}")]
     public async Task<IActionResult> RedirectToOriginal(string shortId)
     {
         if (string.IsNullOrWhiteSpace(shortId))
+        {
             return BadRequest("Missing short ID.");
+        }
+        
+        var ip = GetClientIp(HttpContext);
+
+        var cached = await redis.GetAsync(shortId);
+        if (cached != null)
+        {
+            await SaveStatistics(shortId, ip);
+            return Redirect(cached);
+        }
 
         var urlEntry = await db.Urls.FirstOrDefaultAsync(u => u.ShortId == shortId);
         if (urlEntry == null)
             return NotFound("This URL not found.");
 
-        var ip = GetClientIp(HttpContext);
-        var country = GeoIpService.GetCountry(ip);
 
+        await SaveStatistics(shortId, ip);
+
+        return Redirect(urlEntry.UrlValue);
+    }
+
+    private async Task SaveStatistics(string shortId, string? ip)
+    {
+        if (string.IsNullOrWhiteSpace(shortId))
+        {
+            return;
+        }
+        
+        var country = GeoIpService.GetCountry(ip);
+        
         var visit = new UrlVisit
         {
             ShortId = shortId,
@@ -32,8 +56,6 @@ public class UrlRedirectController(ApplicationDbContext db) : ControllerBase
 
         db.UrlVisit.Add(visit);
         await db.SaveChangesAsync();
-
-        return Redirect(urlEntry.UrlValue);
     }
 
     private static string? GetClientIp(HttpContext context)

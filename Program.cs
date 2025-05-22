@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resend;
+using StackExchange.Redis;
 using UrlSamurai.Components;
 using UrlSamurai.Components.Account;
+using UrlSamurai.Components.Bot;
+using UrlSamurai.Components.Cache;
 using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 
@@ -78,6 +81,35 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
+// Redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var redisUrl = builder.Configuration["REDIS_URL"];
+    if (string.IsNullOrEmpty(redisUrl))
+    {
+        redisUrl = builder.Configuration["REDIS_PUBLIC_URL"]!;
+    }
+
+    var uri = new Uri(redisUrl);
+    var userInfo = uri.UserInfo.Split(':');
+
+    var user = userInfo[0];
+    var password = userInfo[1];
+
+    var config = new ConfigurationOptions
+    {
+        EndPoints = { { uri.Host, uri.Port } },
+        Ssl = false,
+        User = user,
+        Password = password,
+        AbortOnConnectFail = false,
+    };
+
+    return ConnectionMultiplexer.Connect(config);
+});
+
+builder.Services.AddScoped<RedisCacheService>();
+
 
 // ------------------------------------
 // 2. Build app & configure middleware
@@ -129,4 +161,14 @@ app.MapRazorComponents<App>()
 // Identity endpoints
 app.MapAdditionalIdentityEndpoints();
 
+// TG Bot - run as background task before app.Run()
+var botToken = builder.Configuration["TelegramBotToken"];
+if (!string.IsNullOrWhiteSpace(botToken))
+{
+    var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+    var bot = new TelegramInlineBot(botToken, scopeFactory);
+    _ = Task.Run(() => bot.Start());
+}
+
+// Finally, run the web app (blocking call)
 app.Run();

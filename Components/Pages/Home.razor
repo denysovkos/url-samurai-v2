@@ -2,11 +2,13 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Text.RegularExpressions
 @using Microsoft.EntityFrameworkCore
+@using UrlSamurai.Components.Cache
 @using UrlSamurai.Data
 @using UrlSamurai.Data.Entities
 
 @inject ApplicationDbContext DbContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject RedisCacheService Redis
 
 <PageTitle>Home</PageTitle>
 
@@ -84,6 +86,7 @@
 
         await DbContext.Urls.AddAsync(newUrl);
         await DbContext.SaveChangesAsync();
+        await Redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue);
 
         SavedUrl = await DbContext.Urls.FirstOrDefaultAsync(u => u.Id == newUrl.Id);
 

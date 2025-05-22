@@ -5,10 +5,12 @@ namespace UrlSamurai.Components.Services;
 
 public static class GeoIpService
 {
-    private static readonly string DbPath = Path.Combine(
-        Path.GetDirectoryName(typeof(GeoIpService).Assembly.Location)!,
-        "GeoLite2-Country.mmdb"
-    );
+    // private static readonly string DbPath = Path.Combine(
+    //     Path.GetDirectoryName(typeof(GeoIpService).Assembly.Location)!,
+    //     "GeoLite2-Country.mmdb"
+    // );
+
+    private const string DbPath = "GeoLite2-Country.mmdb";
 
     public static string? GetCountry(string? ip)
     {

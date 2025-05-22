@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 using UrlSamurai.Data.Entities;
 
@@ -19,11 +20,11 @@ public class UrlRedirectController(ApplicationDbContext db) : ControllerBase
         if (urlEntry == null)
             return NotFound("This URL not found.");
 
-        var country = HttpContext.Connection.RemoteIpAddress?.ToString(); // later replace with GeoIP lookup
+        var country = HttpContext.Connection.RemoteIpAddress?.ToString();
         var visit = new UrlVisit
         {
             ShortId = shortId,
-            Country = country // placeholder, not real country yet
+            Country = GeoIpService.GetCountry(country)
         };
 
         db.UrlVisit.Add(visit);

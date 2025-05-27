@@ -6,21 +6,23 @@
 @using UrlSamurai.Data.Entities
 @inject QrCodeService QrService
 
-<div>
-    <div class="alert alert-success mt-4">
-        <p>
-            <strong>Shortened URL:</strong>
-            <span class="me-2">@_formattedUrl</span>
+<div class="alert alert-success mt-4 d-flex flex-column align-items-center text-center">
+    <div class="mb-3">
+        <strong>Shortened URL:</strong>
+        <div class="d-flex align-items-center justify-content-center mt-2">
+            <span class="me-3">@_formattedUrl</span>
             <button type="button"
                     class="btn btn-sm btn-outline-secondary"
-                    onclick="navigator.clipboard.writeText('@_formattedUrl')"
-            >
+                    onclick="navigator.clipboard.writeText('@_formattedUrl')">
                 Copy
             </button>
-        </p>
-
-        <img style="max-height: 200px; max-width: 200px" src="data:image/png;base64,@_base64Qr" alt="QRCode"/>
+        </div>
     </div>
+
+    <img class="img-fluid rounded border" 
+         style="max-height: 200px; max-width: 200px" 
+         src="data:image/png;base64,@_base64Qr" 
+         alt="QRCode"/>
 </div>
 
 @code {
@@ -33,7 +35,7 @@
     {
         if (GeneratedUrl?.ShortId is not null)
         {
-            _formattedUrl = string.Format(CultureInfo.InvariantCulture, "https://www.sshare.dev/u/{0}", UrlEncoder.Default.Encode(GeneratedUrl.ShortId));
+            _formattedUrl = string.Format(CultureInfo.InvariantCulture, "https://www.twik.cc/u/{0}", UrlEncoder.Default.Encode(GeneratedUrl.ShortId));
             _base64Qr = QrService.GenerateBase64(_formattedUrl);
         }
     }

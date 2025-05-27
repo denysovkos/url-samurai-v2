@@ -96,7 +96,7 @@ public class TelegramInlineBot(string botToken, IServiceScopeFactory scopeFactor
         await db.Urls.AddAsync(newUrl, token);
         await db.SaveChangesAsync(token);
 
-        var shortLink = $"https://www.sshare.dev/u/{newUrl.ShortId}";
+        var shortLink = $"https://www.twik.cc/u/{newUrl.ShortId}";
 
         if (isInline)
         {

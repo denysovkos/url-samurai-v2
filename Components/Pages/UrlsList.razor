@@ -5,6 +5,7 @@
 @using UrlSamurai.Data
 @using System.Globalization
 @using System.Text.Encodings.Web
+@using UrlSamurai.Components.Services
 
 @attribute [StreamRendering]
 
@@ -13,11 +14,11 @@
 
 <h3>Your URLs</h3>
 
-@if (urlsList == null)
+@if (_urlsList == null)
 {
     <p><em>Loading...</em></p>
 }
-else if (urlsList.Length == 0)
+else if (_urlsList.Length == 0)
 {
     <p><em>No URLs found.</em></p>
 }
@@ -26,6 +27,7 @@ else
     <table class="table">
         <thead>
             <tr>
+                <th></th>
                 <th>Id</th>
                 <th>Original URL</th>
                 <th>Shortened URL</th>
@@ -34,9 +36,25 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var url in urlsList)
+            @foreach (var url in _urlsList)
             {
+                var isExpandable = url.VisitCount > 0;
+                var rowId = $"expand-{url.ShortId}";
+
                 <tr>
+                    <td>
+                        @if (isExpandable)
+                        {
+                            <button class="btn btn-sm btn-link"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target=@($"#{rowId}")
+                                    aria-expanded="false"
+                                    aria-controls=@rowId
+                                    @onclick="() => LoadStats(url.ShortId)">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        }
+                    </td>
                     <td>@url.ShortId</td>
                     <td>@url.UrlValue</td>
                     <td>
@@ -48,6 +66,34 @@ else
                     <td>@url.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
                     <td>@url.VisitCount</td>
                 </tr>
+
+                @if (isExpandable)
+                {
+                    <tr class="collapse" id="@rowId">
+                        <td colspan="6">
+                            <div class="p-3 bg-light rounded border">
+                                <strong>Stats:</strong>
+                                @if (_statsByShortId.TryGetValue(url.ShortId, out var stats))
+                                {
+                                    <ul class="mb-1">
+                                        @foreach (var stat in stats)
+                                        {
+                                            var code = stat.Key;
+                                            var display = CountryFlagService.GetDisplayName(code);
+                                            <li>@display – @stat.Value</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p><em>Loading stats...</em></p>
+                                }
+                                <span class="badge bg-secondary" data-bs-toggle="popover" data-bs-content="In development">Operating Systems</span>
+                                <span class="badge bg-secondary ms-2" data-bs-toggle="popover" data-bs-content="In development">Devices</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
@@ -60,7 +106,7 @@ else
 }
 
 @code {
-    private UrlWithCount[]? urlsList;
+    private UrlWithCount[]? _urlsList;
     private int _currentPage = 1;
     private const int PageSize = 10;
     private int _totalPages = 1;
@@ -73,6 +119,8 @@ else
         public int VisitCount { get; set; }
     }
 
+    private readonly Dictionary<string, Dictionary<string, int>> _statsByShortId = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadPage();
@@ -84,7 +132,7 @@ else
         var user = authState.User;
         if (user.Identity?.IsAuthenticated != true)
         {
-            urlsList = [];
+            _urlsList = [];
             return;
         }
 
@@ -93,7 +141,7 @@ else
         var totalCount = await DbContext.Urls.CountAsync(u => u.OwnerId == ownerId);
         _totalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
 
-        urlsList = await (
+        _urlsList = await (
             from url in DbContext.Urls
             where url.OwnerId == ownerId
             join visit in DbContext.UrlVisit on url.ShortId equals visit.ShortId into visitGroup
@@ -109,6 +157,18 @@ else
         .Skip((_currentPage - 1) * PageSize)
         .Take(PageSize)
         .ToArrayAsync();
+    }
+
+    private async Task LoadStats(string shortId)
+    {
+        var grouped = await DbContext.UrlVisit
+            .Where(v => v.ShortId == shortId)
+            .GroupBy(v => string.IsNullOrWhiteSpace(v.Country) ? "OTHER" : v.Country.ToUpper())
+            .Select(g => new { CountryCode = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
+            .ToDictionaryAsync(g => g.CountryCode, g => g.Count);
+
+        _statsByShortId[shortId] = grouped;
     }
 
     private async Task NextPage()

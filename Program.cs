@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resend;
 using StackExchange.Redis;
+using UrlSamurai;
 using UrlSamurai.Components;
 using UrlSamurai.Components.Account;
 using UrlSamurai.Components.Bot;
@@ -23,7 +24,10 @@ builder.Services.AddRazorComponents()
 // Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.DocumentFilter<SwaggerFilter>();
+});
 
 // Identity-related
 builder.Services.AddCascadingAuthenticationState();

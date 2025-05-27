@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using UrlSamurai.Components.Cache;
 using UrlSamurai.Data;
 
@@ -17,8 +18,10 @@ public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor htt
     [HttpPost]
     public async Task<IActionResult> SaveUrl([FromBody] UrlInput input, [FromQuery] string? source)
     {
-        if (string.IsNullOrWhiteSpace(input.Url))
+        if (string.IsNullOrWhiteSpace(input.Url) || !UrlValidator.IsValid(input.Url))
+        {
             return BadRequest("URL is required.");
+        }
 
         var user = httpContextAccessor.HttpContext?.User;
         var ownerId = user?.Identity?.IsAuthenticated == true
@@ -38,7 +41,19 @@ public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor htt
         await db.SaveChangesAsync();
 
         await redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue);
+        
+        var shortLink = $"https://www.twik.cc/u/{newUrl.ShortId}";
 
-        return Ok(new { id = newUrl.Id, shortId = newUrl.ShortId });
+        return Ok(new { id = newUrl.ShortId, url = shortLink });
+    }
+    
+    internal static class UrlValidator
+    {
+        private static readonly Regex UrlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
+
+        public static bool IsValid(string? url)
+        {
+            return !string.IsNullOrWhiteSpace(url) && UrlRegex.IsMatch(url);
+        }
     }
 }

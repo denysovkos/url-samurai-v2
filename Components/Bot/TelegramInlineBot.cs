@@ -53,7 +53,6 @@ public class TelegramInlineBot(string botToken, IServiceScopeFactory scopeFactor
         long? chatId
     )
     {
-        Console.WriteLine($"PASSED URL >>> {inputUrl}");
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         

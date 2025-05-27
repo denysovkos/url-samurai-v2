@@ -12,43 +12,42 @@ public static class GeoIpService
 
     private const string DbPath = "GeoLite2-Country.mmdb";
 
-    public static string? GetCountry(string? ip)
+    public static string? GetCountry(string? ipList)
     {
-        Console.WriteLine($"Redirect requested URL: {ip}");
-        if (string.IsNullOrWhiteSpace(ip))
-        {
+        Console.WriteLine($"Redirect requested IP(s): {ipList}");
+        if (string.IsNullOrWhiteSpace(ipList))
             return null;
-        }
-            
 
-        try
-        {
-            var parsedIp = IPAddress.Parse(ip);
-            if (parsedIp.IsIPv4MappedToIPv6)
-            {
-                parsedIp = parsedIp.MapToIPv4();
-            }
-            
-            Console.WriteLine($"Parsed IP: {parsedIp}");
-            if (!IsPublic(parsedIp))
-            {
-                Console.WriteLine($"Not a public IP :: {parsedIp}");
-                return null;
-            }
-                
+        var ips = ipList.Split(',').Select(ip => ip.Trim());
 
-            using var reader = new DatabaseReader(DbPath);
-            var country = reader.Country(parsedIp);
-            Console.WriteLine($"Found ISO code: {country?.Country?.IsoCode}");
-            return country?.Country?.IsoCode;
-        }
-        catch (Exception err)
+        foreach (var ip in ips)
         {
-            Console.WriteLine(err);
-            return null;
+            try
+            {
+                var parsedIp = IPAddress.Parse(ip);
+                if (parsedIp.IsIPv4MappedToIPv6)
+                    parsedIp = parsedIp.MapToIPv4();
+
+                if (!IsPublic(parsedIp))
+                {
+                    Console.WriteLine($"Not a public IP :: {parsedIp}");
+                    continue;
+                }
+
+                Console.WriteLine($"Using IP: {parsedIp}");
+                using var reader = new DatabaseReader(DbPath);
+                var country = reader.Country(parsedIp);
+                Console.WriteLine($"Found ISO code: {country?.Country?.IsoCode}");
+                return country?.Country?.IsoCode;
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine($"Failed parsing IP {ip}: {err.Message}");
+            }
         }
+
+        return null;
     }
-
     
     private static bool IsPublic(IPAddress ip)
     {

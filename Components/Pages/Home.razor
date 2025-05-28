@@ -17,10 +17,21 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
 
-            <div class="mb-3">
+            <div class="input-group mb-3">
                 <InputText @bind-Value="Input.Url" class="form-control" placeholder="Enter your URL..." />
-                <ValidationMessage For="() => Input.Url" class="text-danger" />
+    
+                <InputSelect @bind-Value="Input.ValidFor" class="form-select" style="max-width: 160px;">
+                    <option value="180">6 months</option>
+                    <option value="1">1 day</option>
+                    <option value="3">3 days</option>
+                    <option value="7">1 week</option>
+                    <option value="14">2 weeks</option>
+                    <option value="30">1 month</option>
+                    <option value="120">4 months</option>
+                </InputSelect>
             </div>
+            
+            <ValidationMessage For="() => Input.Url" class="text-danger" />
 
             <button type="submit" class="btn btn-primary w-100">Shorten URL</button>
         </EditForm>
@@ -91,16 +102,22 @@
         {
             UrlValue = Input.Url,
             CreatedAt = DateTime.UtcNow,
-            OwnerId = ownerId
+            OwnerId = ownerId,
+            ValidTill = GetExpirationDate(Input.ValidFor)
         };
 
         await DbContext.Urls.AddAsync(newUrl);
         await DbContext.SaveChangesAsync();
-        await Redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue);
+        await Redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue, TimeSpan.FromDays(Input.ValidFor));
 
         SavedUrl = await DbContext.Urls.FirstOrDefaultAsync(u => u.Id == newUrl.Id);
 
         Input = new InputModel(); // Clear form
+    }
+    
+    public DateTime GetExpirationDate(int validForDays)
+    {
+        return DateTime.UtcNow.AddDays(validForDays);
     }
 
     public sealed class InputModel
@@ -108,6 +125,8 @@
         [Required(ErrorMessage = "URL is required")]
         [CustomValidation(typeof(InputModel), nameof(ValidateUrl))]
         public string Url { get; set; } = string.Empty;
+        
+        public int ValidFor { get; set; } = 180; // default to 6 months
 
         private static readonly Regex UrlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
 

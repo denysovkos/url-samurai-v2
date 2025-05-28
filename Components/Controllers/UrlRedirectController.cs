@@ -29,9 +29,11 @@ public class UrlRedirectController(ApplicationDbContext db, RedisCacheService re
             return Redirect(cached);
         }
 
-        var urlEntry = await db.Urls.FirstOrDefaultAsync(u => u.ShortId == shortId);
+        var urlEntry = await UrlsService.FindUrl(db, shortId);
         if (urlEntry == null)
+        {
             return NotFound("This URL not found.");
+        }
 
 
         await SaveStatistics(shortId, ip);

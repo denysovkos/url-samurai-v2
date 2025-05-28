@@ -18,4 +18,6 @@ public class Urls
     public string? ShortId { get; set; }
 
     public int NumericId { get; set; }
+    
+    public DateTime? ValidTill { get; set; }
 }

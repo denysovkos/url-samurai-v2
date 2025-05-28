@@ -32,6 +32,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.ShortId).HasColumnName("shortId").ValueGeneratedOnAddOrUpdate();
             entity.Property(e => e.NumericId).HasColumnName("numericId")
                 .UseIdentityAlwaysColumn();
+            
+            entity.Property(e => e.ValidTill).HasColumnName("validTill");
 
             entity.HasIndex(e => e.ShortId).IsUnique();
         });

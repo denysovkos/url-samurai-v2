@@ -33,6 +33,7 @@ public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor htt
             UrlValue = input.Url,
             CreatedAt = DateTime.UtcNow,
             OwnerId = ownerId,
+            ValidTill = DateTime.UtcNow.AddDays(180),
         };
         
         Console.WriteLine($"Saving URL: {newUrl.UrlValue} owner: {newUrl.OwnerId} source: ${source}");

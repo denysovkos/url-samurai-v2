@@ -90,6 +90,7 @@ public class TelegramInlineBot(string botToken, IServiceScopeFactory scopeFactor
         {
             UrlValue = inputUrl,
             CreatedAt = DateTime.UtcNow,
+            ValidTill = DateTime.UtcNow.AddDays(180),
         };
 
         await db.Urls.AddAsync(newUrl, token);

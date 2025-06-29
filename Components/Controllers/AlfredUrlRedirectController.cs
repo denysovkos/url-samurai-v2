@@ -1,15 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using UrlSamurai.Components.Services;
-using UrlSamurai.Data;
 using UrlSamurai.Data.Entities;
 using System.Net;
 using UrlSamurai.Components.Cache;
+using UrlSamurai.Data;
 
 namespace UrlSamurai.Components.Controllers;
 
 [ApiController]
-[Route("u")]
-public class UrlRedirectController(ApplicationDbContext db, RedisCacheService redis) : ControllerBase
+[Route("url")]
+public class AlfredUrlRedirectController(ApplicationDbContext db, RedisCacheService redis) : ControllerBase
 {
     [HttpGet("{shortId}")]
     public async Task<IActionResult> RedirectToOriginal(string shortId)

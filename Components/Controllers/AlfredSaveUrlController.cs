@@ -45,7 +45,7 @@ public class AlfredSaveUrlController(ApplicationDbContext db, IHttpContextAccess
         
         var shortLink = $"https://www.twik.cc/u/{newUrl.ShortId}";
 
-        return Ok(new { id = newUrl.ShortId, url = shortLink });
+        return Ok(new { id = newUrl.ShortId, url = shortLink, shortUrlId = newUrl.ShortId });
     }
 
     private static class UrlValidator

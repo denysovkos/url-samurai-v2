@@ -7,8 +7,8 @@ using UrlSamurai.Data;
 namespace UrlSamurai.Components.Controllers;
 
 [ApiController]
-[Route("url")]
-public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, RedisCacheService redis) : ControllerBase
+[Route("api/url")]
+public class AlfredSaveUrlController(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, RedisCacheService redis) : ControllerBase
 {
     public class UrlInput
     {

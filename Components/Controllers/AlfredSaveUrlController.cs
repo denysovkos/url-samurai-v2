@@ -10,13 +10,8 @@ namespace UrlSamurai.Components.Controllers;
 [Route("api/url")]
 public class AlfredSaveUrlController(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, RedisCacheService redis) : ControllerBase
 {
-    public class UrlInput
-    {
-        public string Url { get; set; } = default!;
-    }
-
     [HttpPost]
-    public async Task<IActionResult> SaveUrl([FromBody] UrlInput input, [FromQuery] string? source)
+    public async Task<IActionResult> SaveUrl([FromBody] Dto.UrlInput input, [FromQuery] string? source)
     {
         if (string.IsNullOrWhiteSpace(input.Url) || !UrlValidator.IsValid(input.Url))
         {

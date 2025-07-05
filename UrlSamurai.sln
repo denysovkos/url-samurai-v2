@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UrlSamurai", "UrlSamurai.csproj", "{8349BBA5-D088-46FC-8886-B5D88B07EA4B}"
 EndProject
 Global

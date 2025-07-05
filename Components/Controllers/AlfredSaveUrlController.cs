@@ -1,19 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using UrlSamurai.Components.Bot;
 using UrlSamurai.Components.Cache;
+using UrlSamurai.Components.Controllers.UrlControllerBase;
+using UrlSamurai.Components.Services;
 using UrlSamurai.Data;
 
 namespace UrlSamurai.Components.Controllers;
 
 [ApiController]
 [Route("api/url")]
-public class AlfredSaveUrlController(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, RedisCacheService redis) : ControllerBase
+public class AlfredSaveUrlController(IUrlsService urlService, IHttpContextAccessor httpContextAccessor, IRedisCacheService redis) : UrlsControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> SaveUrl([FromBody] Dto.UrlInput input, [FromQuery] string? source)
     {
-        if (string.IsNullOrWhiteSpace(input.Url) || !UrlValidator.IsValid(input.Url))
+        if (string.IsNullOrWhiteSpace(input.Url) || !TelegramInlineBot.UrlValidator.IsValid(input.Url))
         {
             return BadRequest("URL is required.");
         }
@@ -22,34 +25,13 @@ public class AlfredSaveUrlController(ApplicationDbContext db, IHttpContextAccess
         var ownerId = user?.Identity?.IsAuthenticated == true
             ? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
             : null;
-
-        var newUrl = new Data.Entities.Urls
-        {
-            UrlValue = input.Url,
-            CreatedAt = DateTime.UtcNow,
-            OwnerId = ownerId,
-            ValidTill = DateTime.UtcNow.AddDays(180),
-        };
         
-        Console.WriteLine($"Saving URL: {newUrl.UrlValue} owner: {newUrl.OwnerId} source: ${source}");
+        var (shortId, urlValue) = await urlService.SaveUrl(input.Url, ownerId, source);
 
-        await db.Urls.AddAsync(newUrl);
-        await db.SaveChangesAsync();
-
-        await redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue);
+        await redis.SetAsync(shortId!, urlValue);
         
-        var shortLink = $"https://www.twik.cc/u/{newUrl.ShortId}";
+        var shortLink = $"https://www.twik.cc/u/{shortId}";
 
-        return Ok(new { id = newUrl.ShortId, url = shortLink, shortUrlId = newUrl.ShortId });
-    }
-
-    private static class UrlValidator
-    {
-        private static readonly Regex UrlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
-
-        public static bool IsValid(string? url)
-        {
-            return !string.IsNullOrWhiteSpace(url) && UrlRegex.IsMatch(url);
-        }
+        return Ok(new { id = shortId, url = shortLink, shortUrlId = shortId });
     }
 }

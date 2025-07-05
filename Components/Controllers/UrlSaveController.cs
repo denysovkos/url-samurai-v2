@@ -1,22 +1,19 @@
-using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using UrlSamurai.Components.Cache;
+using UrlSamurai.Components.Controllers.UrlControllerBase;
 using UrlSamurai.Components.Services;
-using UrlSamurai.Data;
-using UrlSamurai.Data.Entities;
 
 namespace UrlSamurai.Components.Controllers;
 
 [ApiController]
 [Route("url")]
-public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, RedisCacheService redis) : ControllerBase
+public class UrlSaveController(IUrlsService urlService, IHttpContextAccessor httpContextAccessor, IRedisCacheService redis) : UrlsControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> SaveUrl([FromBody] Dto.UrlInput input, [FromQuery] string? source)
     {
-        if (string.IsNullOrWhiteSpace(input.Url) || !UrlValidator.IsValid(input.Url))
+        if (IsUrlValid(input.Url))
         {
             return BadRequest("URL is required.");
         }
@@ -26,24 +23,13 @@ public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor htt
             ? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
             : null;
 
-        var newUrl = new Data.Entities.Urls
-        {
-            UrlValue = input.Url,
-            CreatedAt = DateTime.UtcNow,
-            OwnerId = ownerId,
-            ValidTill = DateTime.UtcNow.AddDays(180),
-        };
+        var (shortId, urlValue) = await urlService.SaveUrl(input.Url, ownerId, source);
+
+        await redis.SetAsync(shortId!, urlValue);
         
-        Console.WriteLine($"Saving URL: {newUrl.UrlValue} owner: {newUrl.OwnerId} source: ${source}");
+        var shortLink = $"https://www.twik.cc/u/{shortId}";
 
-        await db.Urls.AddAsync(newUrl);
-        await db.SaveChangesAsync();
-
-        await redis.SetAsync(newUrl.ShortId!, newUrl.UrlValue);
-        
-        var shortLink = $"https://www.twik.cc/u/{newUrl.ShortId}";
-
-        return Ok(new { id = newUrl.ShortId, url = shortLink });
+        return Ok(new { id = shortId, url = shortLink });
     }
     
     // Alfred redirects AAAAAAAAAA!!!!
@@ -61,61 +47,19 @@ public class UrlSaveController(ApplicationDbContext db, IHttpContextAccessor htt
         var cached = await redis.GetAsync(shortId);
         if (cached != null)
         {
-            await SaveStatistics(shortId, ip);
+            await urlService.SaveStatistics(shortId, ip);
             return Redirect(cached);
         }
 
-        var urlEntry = await UrlsService.FindUrl(db, shortId);
+        var urlEntry = await urlService.FindUrl(shortId);
         if (urlEntry == null)
         {
             return NotFound("This URL not found.");
         }
 
 
-        await SaveStatistics(shortId, ip);
+        await urlService.SaveStatistics(shortId, ip);
 
         return Redirect(urlEntry.UrlValue);
-    }
-
-    private async Task SaveStatistics(string shortId, string? ip)
-    {
-        if (string.IsNullOrWhiteSpace(shortId))
-        {
-            return;
-        }
-        
-        var country = GeoIpService.GetCountry(ip);
-        
-        var visit = new UrlVisit
-        {
-            ShortId = shortId,
-            Country = country
-        };
-
-        db.UrlVisit.Add(visit);
-        await db.SaveChangesAsync();
-    }
-
-    private static string? GetClientIp(HttpContext context)
-    {
-        var headers = context.Request.Headers;
-        string? ip = headers["X-Forwarded-For"].FirstOrDefault()
-                     ?? headers["X-Real-IP"].FirstOrDefault()
-                     ?? context.Connection.RemoteIpAddress?.ToString();
-
-        if (IPAddress.TryParse(ip, out var parsed) && parsed.IsIPv4MappedToIPv6)
-            ip = parsed.MapToIPv4().ToString();
-
-        return ip;
-    }
-
-    private static class UrlValidator
-    {
-        private static readonly Regex UrlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
-
-        public static bool IsValid(string? url)
-        {
-            return !string.IsNullOrWhiteSpace(url) && UrlRegex.IsMatch(url);
-        }
     }
 }

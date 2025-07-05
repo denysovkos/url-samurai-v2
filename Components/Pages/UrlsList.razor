@@ -148,7 +148,7 @@ else
             orderby url.Id descending
             select new UrlWithCount
             {
-                ShortId = url.ShortId,
+                ShortId = url.ShortId!,
                 UrlValue = url.UrlValue,
                 CreatedAt = url.CreatedAt,
                 VisitCount = visitGroup.Count()

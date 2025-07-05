@@ -31,12 +31,14 @@
     private string? _base64Qr;
     private string? _formattedUrl;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        if (GeneratedUrl?.ShortId is not null)
+        if (GeneratedUrl?.ShortId is null)
         {
-            _formattedUrl = string.Format(CultureInfo.InvariantCulture, "https://www.twik.cc/u/{0}", UrlEncoder.Default.Encode(GeneratedUrl.ShortId));
-            _base64Qr = QrService.GenerateBase64(_formattedUrl);
+            return;
         }
+        
+        _formattedUrl = string.Format(CultureInfo.InvariantCulture, "https://www.twik.cc/u/{0}", UrlEncoder.Default.Encode(GeneratedUrl.ShortId));
+        _base64Qr = QrService.GenerateBase64(_formattedUrl);
     }
 }

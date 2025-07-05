@@ -79,6 +79,12 @@ builder.Services.AddCors(options =>
 // QRCodes Generator
 builder.Services.AddSingleton<QrCodeService>();
 
+// Url service
+builder.Services.AddScoped<IUrlsService, UrlsService>();
+
+// Redis cache service
+builder.Services.AddScoped<IRedisCacheService, RedisCacheService>();
+
 // Headers fix
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

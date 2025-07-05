@@ -2,7 +2,13 @@ using StackExchange.Redis;
 
 namespace UrlSamurai.Components.Cache;
 
-public class RedisCacheService(IConnectionMultiplexer redis)
+public interface IRedisCacheService
+{
+    Task SetAsync(string key, string value, TimeSpan? ttl = null);
+    Task<string?> GetAsync(string key);
+}
+
+public class RedisCacheService(IConnectionMultiplexer redis) : IRedisCacheService
 {
     private readonly IDatabase _db = redis.GetDatabase();
 

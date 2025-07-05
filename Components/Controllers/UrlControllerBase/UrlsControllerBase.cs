@@ -4,18 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace UrlSamurai.Components.Controllers.UrlControllerBase;
 
-public interface IUrlsControllerBase
-{
-    string? GetClientIp(HttpContext context);
-
-    bool IsUrlValid(string? url);
-}
-
-public class UrlsControllerBase : ControllerBase, IUrlsControllerBase
+public class UrlsControllerBase : ControllerBase
 {
     private readonly Regex _urlRegex = new(@"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$", RegexOptions.Compiled);
     
-    public string? GetClientIp(HttpContext context)
+    protected string? GetClientIp(HttpContext context)
     {
         var headers = context.Request.Headers;
         var ip = headers["X-Forwarded-For"].FirstOrDefault()
@@ -28,7 +21,7 @@ public class UrlsControllerBase : ControllerBase, IUrlsControllerBase
         return ip;
     }
     
-    public bool IsUrlValid(string? url)
+    protected bool IsUrlValid(string? url)
     {
         return !string.IsNullOrWhiteSpace(url) && _urlRegex.IsMatch(url);
     }
